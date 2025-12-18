@@ -181,7 +181,7 @@ def parse_args():
     parser.add_argument('--process', type=str, default='defense', help='process type: train/test',choices=['test', 'attack','defense'])
    ##攻击
     parser.add_argument('--image-path', type=str, help='输入图像路径')
-    parser.add_argument('--attack-method', type=str, default='deepfool', 
+    parser.add_argument('--attack-method', type=str, default='pgd', 
                         choices=['fgsm', 'pgd', 'bim','badnet', 'squareattack', 'nes'], 
                         help='对抗攻击方法')
     parser.add_argument('--epsilon', type=float, default=8/255, help='扰动强度')
