@@ -47,7 +47,6 @@ import sys
 from io import StringIO
 from utils.sse import sse_input_path_validated,sse_output_path_validated
 from utils.vadattack import ImageAttacker
-from utils.vaddefense import FGSMDefense, PGDDefense, load_image , total_variation, load_image, save_image ,create_defense
 # mmcv.disable_progressbar()
 
 def sse_print(event: str, data: dict) -> str:
@@ -120,7 +119,6 @@ def parse_args():
         '--eval',
         type=str,
         nargs='+',
-        default=['bbox'],
         help='evaluation metrics, which depends on the dataset, e.g., "bbox",'
         ' "segm", "proposal" for COCO, and "mAP", "recall" for PASCAL VOC')
     parser.add_argument('--show', action='store_true', help='show results')
@@ -178,11 +176,10 @@ def parse_args():
     parser.add_argument('--steps', type=int, default=10, help='攻击迭代次数(PGD/BIM)')
     parser.add_argument('--alpha', type=float, default=2/255, help='攻击步长(PGD/BIM)')
     parser.add_argument('--cfg-yaml', type=str, help='攻击配置文件路径')
-    # 修改默认process为test而不是defense
-    parser.add_argument('--process', type=str, default='test', help='process type: train/test',choices=['test', 'attack','defense'])
+    parser.add_argument('--process', type=str, default='attack', help='process type: train/test',choices=['test', 'attack'])
    ##攻击
     parser.add_argument('--image-path', type=str, help='输入图像路径')
-    parser.add_argument('--attack-method', type=str, default='pgd', 
+    parser.add_argument('--attack-method', type=str, default='deepfool', 
                         choices=['fgsm', 'pgd', 'bim','badnet', 'squareattack', 'nes'], 
                         help='对抗攻击方法')
     parser.add_argument('--epsilon', type=float, default=8/255, help='扰动强度')
@@ -190,19 +187,10 @@ def parse_args():
     parser.add_argument('--save-original-size', action='store_true', help='是否保存原始尺寸的对抗样本')
     parser.add_argument('--model-name', type=str, default='Standard', help='模型名称')
     parser.add_argument('--dataset', type=str, default='cifar10', help='数据集名称')
-    ##防御
-    parser.add_argument('--defense-method', type=str, default='fgsm', 
-                       choices=['fgsm', 'pgd',], 
-                       help='防御方法')
-    # parser.add_argument('--epsilon', type=float, default=8.0, help='扰动强度限制')
-    parser.add_argument('--tv-weight', type=float, default=1.0, help='总变差权重')
-    parser.add_argument('--l2-weight', type=float, default=0.01, help='L2保真权重')
-    # parser.add_argument('--steps', type=int, default=10, help='PGD迭代步数')
-    # parser.add_argument('--alpha', type=float, default=1.0, help='PGD步长')
 
-    args = parser.parse_args()  # 移动到这里，在所有add_argument之后调用
-
-    # 1. 
+    args = parser.parse_args()
+    
+    # 1. 定义映射规则：key=输入值（小写），value=替换后的值
     method_mapping = {
         'badnet': 'deepfool',
         'squareattack': 'mifgsm',
@@ -268,18 +256,11 @@ def main():
     # 添加检查：当 process 为 test 时，config 和 checkpoint 是必需的
     if args.process == "test":
         if not args.config or not args.checkpoint:
-            # print("Error: the following arguments are required: config, checkpoint")
-            sse_print("error", {"message": "Error: the following arguments are required: config, checkpoint"})
+            print("Error: the following arguments are required: config, checkpoint")
             sys.exit(1)
     # 添加检查：当 process 为 attack 时，image-path 是必需的
     if args.process == "attack" and not args.image_path:
-        # print("Error: the following arguments are required: --image-path")
-        sse_print("error", {"message": "Error: the following arguments are required: --image-path"})
-        sys.exit(1)
-    # 添加检查：当 process 为 defense 时，image-path 是必需的
-    if args.process == "defense" and not args.image_path:
-        # print("Error: the following arguments are required: --image-path")
-        sse_print("error", {"message": "Error: the following arguments are required: --image-path"})
+        print("Error: the following arguments are required: --image-path")
         sys.exit(1)
     
     if args.process == "test":  # 修复变量名 arg -> args
@@ -420,8 +401,7 @@ def main():
         rank, _ = get_dist_info()
         if rank == 0:
             if args.out:
-                # print(f'\nwriting results to {args.out}')
-                sse_print("info", {"message": f"\nwriting results to {args.out}"})
+                print(f'\nwriting results to {args.out}')
                 # assert False
                 if isinstance(outputs, list):
                     mmcv.dump(outputs, args.out)
@@ -443,8 +423,7 @@ def main():
                     eval_kwargs.pop(key, None)
                 eval_kwargs.update(dict(metric=args.eval, **kwargs))
 
-                # print(dataset.evaluate(outputs['bbox_results'], **eval_kwargs))
-                sse_print("evaluation_result", {"result": dataset.evaluate(outputs['bbox_results'], **eval_kwargs)})
+                print(dataset.evaluate(outputs['bbox_results'], **eval_kwargs))
         
             # # # NOTE: record to json
             # json_path = args.json_dir
@@ -531,77 +510,6 @@ def main():
                 sse_print("error", {"message": f"攻击过程中发生错误: {e}"})
                 return False
 
-    elif args.process == "defense":
-        if not args.image_path:
-            sse_print("error", {"message": "请输入图像路径: --image-path"})
-            raise ValueError("请输入图像路径: --image-path")
-        
-        if not args.save_path:
-            sse_print("error", {"message": "请输入保存路径: --save-path"})
-            raise ValueError("请输入保存路径: --save-path")
-            
-        if not os.path.exists(args.image_path):
-            sse_print("error", {"message": f"找不到输入图像: {args.image_path}"})
-            raise FileNotFoundError(f"找不到输入图像: {args.image_path}")
-    
-        # 创建输出目录
-        os.makedirs(os.path.dirname(args.save_path), exist_ok=True)
-        
-        # 加载图像
-        sse_print("loading_image", {"message": f"正在加载图像: {args.image_path}"})
-        try:
-            image_tensor = load_image(args.image_path)
-            # sse_print("image_loaded", {
-            #     "message": f"图像加载成功，形状: {list(image_tensor.shape)}",
-            #     "shape": list(image_tensor.shape)
-            # })
-        except Exception as e:
-            sse_print("error", {"message": f"加载图像失败: {e}"})
-            raise
-        
-        # 创建防御方法
-        sse_print("creating_defense", {"message": f"正在创建防御方法: {args.defense_method}"})
-        try:
-            # 根据防御方法传递相应参数
-            if args.defense_method.lower() == 'fgsm':
-                defense = create_defense(
-                    args.defense_method,
-                    epsilon=args.epsilon,
-                    tv_weight=args.tv_weight,
-                    l2_weight=args.l2_weight
-                )
-            elif args.defense_method.lower() == 'pgd':
-                defense = create_defense(
-                    args.defense_method,
-                    steps=args.steps,
-                    alpha=args.alpha,
-                    epsilon=args.epsilon,
-                    tv_weight=args.tv_weight,
-                    l2_weight=args.l2_weight
-                )
-
-            sse_print("defense_created", {"message": f"防御方法创建成功: {args.defense_method}"})
-        except Exception as e:
-            sse_print("error", {"message": f"创建防御方法失败: {e}"})
-            raise
-        
-        # 执行防御
-        sse_print("defense_started", {"message": f"开始执行{args.defense_method.upper()}防御"})
-        try:
-            purified_image, _ = defense(image_tensor)
-            sse_print("defense_finished", {"message": f"{args.defense_method.upper()}防御执行完成"})
-        except Exception as e:
-            sse_print("error", {"message": f"执行防御失败: {e}"})
-            raise
-        
-        # 保存结果
-        sse_print("saving_image", {"message": f"正在保存防御后图像到: {args.save_path}"})
-        try:
-            save_image(purified_image, args.save_path)
-            sse_print("process_completed", {"message": "图像防御处理完成"})
-        except Exception as e:
-            sse_print("error", {"message": f"保存图像失败: {e}"})
-            raise
 if __name__ == '__main__':
     args = parse_args()
     sse_input_path_validated(args)

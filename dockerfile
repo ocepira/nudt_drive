@@ -15,13 +15,8 @@ RUN pip install opencv-python
     
 COPY . ./
 
-# 自动驾驶运行
-CMD ["python", "test.py"]  
+# 自动驾驶
+CMD ["python", "main.py"]  
 
-#自动驾驶攻击
-# CMD ["python", "attack.py"] 
-
-# 自动驾驶防御
-# CMD ["python", "defense.py"]  
 
 

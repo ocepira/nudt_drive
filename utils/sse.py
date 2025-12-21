@@ -54,7 +54,7 @@ def sse_input_path_validated(args):
                         "file_name": model_files[0] if model_files else f'{args.checkpoint}'
                     })
                 else:
-                    raise ValueError('Input model file not found.')
+                    raise ValueError('Input model vad validate.')
             except Exception as e:
                 sse_print("input_model_validated", {"status": "failure", "message": f"{e}"})
         else:
