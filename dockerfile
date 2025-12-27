@@ -40,10 +40,6 @@ RUN pip config set global.index-url https://mirrors.aliyun.com/pypi/simple/ && \
     pip config set global.trusted-host mirrors.aliyun.com && \
     pip install --upgrade pip setuptools wheel
 
-# ============================================
-# 核心修复：强制安装PyTorch 1.9.1 + CUDA 11.1
-# ============================================
-
 # 安装基础依赖
 RUN pip uninstall -y numpy scikit-image pandas matplotlib shapely 2>/dev/null || true && \
     pip install --no-cache-dir \
