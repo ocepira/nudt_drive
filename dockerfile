@@ -43,12 +43,6 @@ RUN pip config set global.index-url https://mirrors.aliyun.com/pypi/simple/ && \
 # ============================================
 # 核心修复：强制安装PyTorch 1.9.1 + CUDA 11.1
 # ============================================
-RUN pip uninstall -y torch torchvision torchaudio 2>/dev/null || true && \
-    pip cache purge && \
-    pip install --no-cache-dir --force-reinstall \
-    torch==1.9.1+cu111 torchvision==0.10.1+cu111 torchaudio==0.9.1 \
-    -f https://download.pytorch.org/whl/torch_stable.html && \
-    python -c "import torch; print(f'PyTorch: {torch.__version__}, CUDA: {torch.version.cuda}, Available: {torch.cuda.is_available()}'); assert torch.version.cuda.startswith('11.'), f'❌ CUDA版本错误: {torch.version.cuda}'"
 
 # 安装基础依赖
 RUN pip uninstall -y numpy scikit-image pandas matplotlib shapely 2>/dev/null || true && \
