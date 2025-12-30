@@ -6,10 +6,10 @@
 
 | 变量名 | 是否必填 | 描述 |
 |--------|---------|------|
-| input_path | 必填 | 指定输入路径，在此路径下有权重文件和数据集文件 |
-| output_path | 必填 | 指定输出路径，在此路径下保存生成的对抗样本和防御训练的权重 |
-| process | 必填 | 指定进程名称，支持枚举值（第一个为默认值）: `test`, `attack`, `defense` |
-| image-path | 必填 | 输入图像路径，当process为`attack`或`defense`时必填 |
+| input_path | 选填，默认输入路径 | 指定输入路径，在此路径下有权重文件和数据集文件 |
+| output_path | 选填，默认输出路径 | 指定输出路径，在此路径下保存生成的对抗样本和防御训练的权重 |
+| process | 必填/选填，默认test | 指定进程名称，支持枚举值（第一个为默认值）: `test`, `attack`, `defense` |
+| image-path | 选填，默认第一个 | 输入图像路径，当process为`attack`或`defense`时默认第一个 |
 | attack-method | 选填 | 指定攻击方法，若process为`attack`则必填，支持枚举值（第一个为默认值）: `fgsm`, `pgd`, `bim`,`badnet`, `squareattack`, `nes` |
 | defense-method | 选填 | 指定防御方法，若process为`defense`则必填，支持枚举值（第一个为默认值）: `fgsm`, `pgd` |
 | save-path | 选填 | 对抗样本保存路径 |
