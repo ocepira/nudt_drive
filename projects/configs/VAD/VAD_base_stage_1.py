@@ -38,11 +38,11 @@ input_modality = dict(
 _dim_ = 256
 _pos_dim_ = _dim_//2
 _ffn_dim_ = _dim_*2
-_num_levels_ = 4
-bev_h_ = 200
-bev_w_ = 200
-queue_length = 4 # each sequence contains `queue_length` frames.
-total_epochs = 48
+_num_levels_ = 1
+bev_h_ = 100
+bev_w_ = 100
+queue_length = 3 # each sequence contains `queue_length` frames.
+total_epochs = 1
 
 model = dict(
     type='VAD',
@@ -53,14 +53,14 @@ model = dict(
         type='ResNet',
         depth=50,
         num_stages=4,
-        out_indices=(1, 2, 3),
+        out_indices=(3,),
         frozen_stages=1,
         norm_cfg=dict(type='BN', requires_grad=False),
         norm_eval=True,
         style='pytorch'),
     img_neck=dict(
         type='FPN',
-        in_channels=[512, 1024, 2048],
+        in_channels=[2048],
         out_channels=_dim_,
         start_level=0,
         add_extra_convs='on_output',
@@ -171,7 +171,7 @@ model = dict(
             embed_dims=_dim_,
             encoder=dict(
                 type='BEVFormerEncoder',
-                num_layers=6,
+                num_layers=3,
                 pc_range=point_cloud_range,
                 num_points_in_pillar=4,
                 return_intermediate=False,
@@ -199,7 +199,7 @@ model = dict(
                                      'ffn', 'norm'))),
             decoder=dict(
                 type='DetectionTransformerDecoder',
-                num_layers=6,
+                num_layers=3,
                 return_intermediate=True,
                 transformerlayers=dict(
                     type='DetrTransformerDecoderLayer',
@@ -220,7 +220,7 @@ model = dict(
                                      'ffn', 'norm'))),
             map_decoder=dict(
                 type='MapDetectionTransformerDecoder',
-                num_layers=6,
+                num_layers=3,
                 return_intermediate=True,
                 transformerlayers=dict(
                     type='DetrTransformerDecoderLayer',
@@ -309,7 +309,7 @@ model = dict(
             pc_range=point_cloud_range))))
 
 dataset_type = 'VADCustomNuScenesDataset'
-data_root = 'data/nuscenes/'
+data_root = 'input/nuscenes/'
 file_client_args = dict(backend='disk')
 
 train_pipeline = [
@@ -319,7 +319,7 @@ train_pipeline = [
     dict(type='CustomObjectRangeFilter', point_cloud_range=point_cloud_range),
     dict(type='CustomObjectNameFilter', classes=class_names),
     dict(type='NormalizeMultiviewImage', **img_norm_cfg),
-    dict(type='RandomScaleImageMultiViewImage', scales=[0.8]),
+    dict(type='RandomScaleImageMultiViewImage', scales=[0.4]),
     dict(type='PadMultiViewImage', size_divisor=32),
     dict(type='CustomDefaultFormatBundle3D', class_names=class_names, with_ego=True),
     dict(type='CustomCollect3D',\
@@ -345,7 +345,7 @@ test_pipeline = [
         pts_scale_ratio=1,
         flip=False,
         transforms=[
-            dict(type='RandomScaleImageMultiViewImage', scales=[0.8]),
+            dict(type='RandomScaleImageMultiViewImage', scales=[0.4]),
             dict(type='PadMultiViewImage', size_divisor=32),
             dict(type='CustomDefaultFormatBundle3D', class_names=class_names, with_label=False, with_ego=True),
             dict(type='CustomCollect3D',\
@@ -387,6 +387,7 @@ data = dict(
              map_fixed_ptsnum_per_line=map_fixed_ptsnum_per_gt_line,
              map_eval_use_same_gt_sample_num_flag=map_eval_use_same_gt_sample_num_flag,
              use_pkl_result=True,
+            #  max_num_samples=3,
              custom_eval_version='vad_nusc_detection_cvpr_2019'),
     test=dict(type=dataset_type,
               data_root=data_root,
@@ -399,6 +400,7 @@ data = dict(
               map_fixed_ptsnum_per_line=map_fixed_ptsnum_per_gt_line,
               map_eval_use_same_gt_sample_num_flag=map_eval_use_same_gt_sample_num_flag,
               use_pkl_result=True,
+            #   max_num_samples=3,    
               custom_eval_version='vad_nusc_detection_cvpr_2019'),
     shuffler_sampler=dict(type='DistributedGroupSampler'),
     nonshuffler_sampler=dict(type='DistributedSampler')
