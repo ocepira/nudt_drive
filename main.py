@@ -406,7 +406,7 @@ def main():
     # 添加检查：当 process 为 attack 时，image-path 是必需的
     if args.process == "attack" and not args.image_path:
         print("Error: the following arguments are required: --image-path")
-        sys.exit(1)attack
+        sys.exit(1)
     # 添加检查：当 process 为 defense 时，image-path 是必需的
     if args.process == "defense" and not args.image_path:
         print("Error: the following arguments are required: --image-path")
