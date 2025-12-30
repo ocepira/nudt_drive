@@ -35,6 +35,46 @@ cv2.setNumThreads(1)
 import sys
 sys.path.append('')
 
+import json
+
+
+def sse_print(event: str, data: dict) -> str:
+    """
+    SSE 打印
+    :param event: 事件名称
+    :param data: 事件数据（字典或能被 json 序列化的对象）
+    :return: SSE 格式字符串
+    """
+    # 处理数据，确保它可以被JSON序列化
+    def convert_for_json(obj):
+        if isinstance(obj, (np.integer, np.floating, np.bool_)):
+            return obj.item()
+        elif isinstance(obj, np.ndarray):
+            return obj.tolist()
+        elif isinstance(obj, dict):
+            return {key: convert_for_json(value) for key, value in obj.items()}
+        elif isinstance(obj, (list, tuple)):
+            return [convert_for_json(item) for item in obj]
+        else:
+            # 对于其他不可序列化的对象，转换为字符串表示
+            try:
+                json.dumps(obj)
+                return obj
+            except (TypeError, ValueError):
+                return str(obj)
+    
+    # 将数据转成 JSON 字符串
+    try:
+        cleaned_data = convert_for_json(data)
+        json_str = json.dumps(cleaned_data, ensure_ascii=False)
+    except Exception as e:
+        # 如果仍然失败，则只发送简单的错误消息
+        json_str = json.dumps({"error": "Failed to serialize data", "exception": str(e)}, ensure_ascii=False)
+    
+    # 按 SSE 协议格式拼接
+    message = f"event: {event}\n" \
+              f"data: {json_str}\n"
+    print(message, flush=True)
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Train a detector')
@@ -205,7 +245,7 @@ def main():
                 dash_line)
     meta['env_info'] = env_info
     meta['config'] = cfg.pretty_text
-
+    print('dasdasdTraining stadasdasdasdsrted')
     # log some basic info
     logger.info(f'Distributed training: {distributed}')
     logger.info(f'Config:\n{cfg.pretty_text}')
@@ -252,6 +292,16 @@ def main():
             if hasattr(datasets[0], 'PALETTE') else None)
     # add an attribute for visualization convenience
     model.CLASSES = datasets[0].CLASSES
+    
+    # 在训练开始前输出开始事件
+    print('dasdasdTraining started')
+    sse_print('training_start', {
+        'config': args.config,
+        'work_dir': cfg.work_dir,
+        'timestamp': timestamp,
+        'distributed': distributed
+    })
+    
     custom_train_model(
         model,
         datasets,
@@ -260,7 +310,23 @@ def main():
         validate=(not args.no_validate),
         timestamp=timestamp,
         meta=meta)
-
+    
+    # 训练完成后读取并输出日志内容
+    try:
+        with open(log_file, 'r', encoding='utf-8') as f:
+            log_content = f.read()
+        
+        sse_print('training_completed', {
+            'log_file': log_file,
+            'log_content': log_content,
+            'message': 'Training completed successfully'
+        })
+    except Exception as e:
+        sse_print('training_completed', {
+            'log_file': log_file,
+            'error': f'Could not read log file: {str(e)}',
+            'message': 'Training completed, but log file could not be read'
+        })
 
 if __name__ == '__main__':
     main()
