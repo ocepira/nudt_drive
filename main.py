@@ -1111,56 +1111,27 @@ def main():
                     }
                 }
             })
-            # 读取 ./output/vad_defense/ 下的最新 JSON 文件并打印
-
-        
         vad_defense_dir = './output/vad_defense/'
         if os.path.exists(vad_defense_dir):
-            # json_files = [f for f in os.listdir(vad_defense_dir) if f.endswith('.json')]
-            log_json_path = os.path.join(vad_defense_dir, 'log.json')
-            if os.path.exists(log_json_path):
-                json_path = log_json_path
-            # if json_files:
+            # 只查找 .json 文件，排除 .log.json 等日志文件
+            json_files = [f for f in os.listdir(vad_defense_dir) if f.endswith('.json') and not f.endswith('.log.json')]
+            if json_files:
                 # 按修改时间排序，获取最新的文件
-               # latest_json = max(json_files, key=lambda x: os.path.getmtime(os.path.join(vad_defense_dir, x)))
-               # json_path = os.path.join(vad_defense_dir, latest_json)
+                latest_json = max(json_files, key=lambda x: os.path.getmtime(os.path.join(vad_defense_dir, x)))
+                json_path = os.path.join(vad_defense_dir, latest_json)
                 
                 try:
-                    # 检查是否为 log.json 文件（多行JSON格式）
-                    # if latest_json.endswith('.log.json'):
-                        # 逐行读取并处理多行JSON
-                        log_data = []
-                        with open(json_path, 'r', encoding='utf-8') as f:
-                            for line in f:
-                                line = line.strip()
-                                if line:  # 跳过空行
-                                    try:
-                                        # if latest_json.endswith('.log.json'):
-                                            log_data.append(json.loads(line))
-                                    except json.JSONDecodeError:
-                                        # 如果某行不是有效的JSON，跳过
-                                        continue
+                    # 普通JSON文件处理
+                    with open(json_path, 'r', encoding='utf-8') as f:
+                        json_data = json.load(f)
                         
-                        sse_print("自动驾驶防御训练结果", {
-                            "json_file": latest_json,
-                            "content": log_data,
-                            "file_path": json_path,
-                            "message": f"成功读取最新日志JSON文件: {latest_json}",
-                            "entry_count": len(log_data)
-                        })
-                   # else:
-
-                        # 普通JSON文件处理
-                      #  with open(json_path, 'r', encoding='utf-8') as f:
-                       #     json_data = json.load(f)
-                        
-                        sse_print("自动驾驶防御训练结果", {
-                            "json_file": latest_json,
-                            "content": json_data,
-                            "file_path": json_path,
-                            "message": f"成功读取最新JSON文件: {latest_json}",
-                            "entry_count": len(log_data)
-                        })
+                    sse_print("自动驾驶防御训练结果", {
+                        "json_file": latest_json,
+                        "content": json_data,
+                        "file_path": json_path,
+                        "message": f"成功读取最新JSON文件: {latest_json}",
+                        "entry_count": len(json_data) if isinstance(json_data, list) else 1
+                    })
                 except Exception as e:
                     sse_print("自动驾驶防御训练结果", {
                         "error": f"读取JSON文件失败: {str(e)}",
