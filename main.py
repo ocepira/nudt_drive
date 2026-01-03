@@ -193,8 +193,8 @@ def parse_args():
     parser.add_argument('--model-name', type=str, default='Standard', help='模型名称')
     parser.add_argument('--dataset', type=str, default='cifar10', help='数据集名称')
     ##防御
-    parser.add_argument('--defense-method', type=str, default='fgsm', 
-                       choices=['fgsm', 'pgd',], 
+    parser.add_argument('--defense-method', type=str, default='fgsm_denoise', 
+                       choices=['fgsm_denoise', 'pgd_purifier',], 
                        help='防御方法')
     # parser.add_argument('--epsilon', type=float, default=8.0, help='扰动强度限制')
     parser.add_argument('--tv-weight', type=float, default=1.0, help='总变差权重')
@@ -918,14 +918,14 @@ def main():
         sse_print("creating_defense", {"message": f"正在创建防御方法: {args.defense_method}"})
         try:
             # 根据防御方法传递相应参数
-            if args.defense_method.lower() == 'fgsm':
+            if args.defense_method.lower() == 'fgsm_denoise':
                 defense = create_defense(
                     args.defense_method,
                     epsilon=args.epsilon,
                     tv_weight=args.tv_weight,
                     l2_weight=args.l2_weight
                 )
-            elif args.defense_method.lower() == 'pgd':
+            elif args.defense_method.lower() == 'pgd_purifier':
                 defense = create_defense(
                     args.defense_method,
                     steps=args.steps,
