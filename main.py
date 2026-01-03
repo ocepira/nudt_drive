@@ -170,7 +170,7 @@ def parse_args():
         default='none',
         help='job launcher')
     parser.add_argument('--local_rank', type=int, default=0)
-    parser.add_argument('--input_path', type=str, default='./input/nuscenes', help='input path')
+    parser.add_argument('--input_path', type=str, default='./input/data/nuscenes', help='input path')
     parser.add_argument('--output_path', type=str, default='../output', help='output path')  # 修正参数名
     # 2025/12/9 add attack args
     # parser.add_argument('--attack', action='store_true', help='是否启用对抗攻击')
@@ -183,7 +183,7 @@ def parse_args():
     # 修改默认process为test而不是defense
     parser.add_argument('--process', type=str, default='test', help='process type: train/test',choices=['test', 'attack','adv','defense'])
    ##攻击
-    parser.add_argument('--image-path', type=str, help='输入图像路径',default=r'input/nuscenes/sweeps/CAM_BACK/n008-2018-08-01-15-16-36-0400__CAM_BACK__1533151603637558.jpg')
+    parser.add_argument('--image-path', type=str, help='输入图像路径',default=r'input/data/nuscenes/sweeps/CAM_BACK/n008-2018-08-01-15-16-36-0400__CAM_BACK__1533151603637558.jpg')
     parser.add_argument('--attack-method', type=str, default='pgd', 
                         choices=['fgsm', 'pgd', 'bim','badnet', 'squareattack', 'nes'], 
                         help='对抗攻击方法')
@@ -1111,6 +1111,8 @@ def main():
                     }
                 }
             })
+
+        
         vad_defense_dir = './output/vad_defense/'
         if os.path.exists(vad_defense_dir):
             # 只查找 .json 文件，排除 .log.json 等日志文件
@@ -1125,26 +1127,103 @@ def main():
                     with open(json_path, 'r', encoding='utf-8') as f:
                         json_data = json.load(f)
                         
-                    sse_print("自动驾驶防御训练结果", {
-                        "json_file": latest_json,
-                        "content": json_data,
-                        "file_path": json_path,
+                    sse_print("defense_training_result", {
+                        "status": "success",
                         "message": f"成功读取最新JSON文件: {latest_json}",
-                        "entry_count": len(json_data) if isinstance(json_data, list) else 1
+                        "file_path": json_path,
+                        "content": json_data,
+                        "entry_count": len(json_data) if isinstance(json_data, list) else "N/A",
+                        "progress": 100,
+                        "log": f"[100%] 防御训练结果已读取: {latest_json}"
+                    })
+                except json.JSONDecodeError as e:
+                    sse_print("defense_training_result", {
+                        "status": "error",
+                        "message": f"JSON解析错误: {str(e)}",
+                        "file_path": json_path,
+                        "error_type": "JSONDecodeError",
+                        "progress": 100,
+                        "log": f"[100%] 解析JSON文件失败: {str(e)}"
                     })
                 except Exception as e:
-                    sse_print("自动驾驶防御训练结果", {
-                        "error": f"读取JSON文件失败: {str(e)}",
+                    sse_print("defense_training_result", {
+                        "status": "error", 
+                        "message": f"读取JSON文件失败: {str(e)}",
                         "file_path": json_path,
-                        "message": "读取防御训练结果失败"
+                        "error_type": type(e).__name__,
+                        "progress": 100,
+                        "log": f"[100%] 读取JSON文件时发生错误: {str(e)}"
                     })
             else:
-                sse_print("自动驾驶防御训练结果", {
-                    "message": f"目录 {vad_defense_dir} 中没有找到JSON文件"
-                })
+                # 搜索所有可能的JSON文件，包括日志文件
+                all_json_files = [f for f in os.listdir(vad_defense_dir) if f.endswith('.json')]
+                if all_json_files:
+                    latest_json = max(all_json_files, key=lambda x: os.path.getmtime(os.path.join(vad_defense_dir, x)))
+                    json_path = os.path.join(vad_defense_dir, latest_json)
+                    
+                    try:
+                        # 尝试读取日志文件内容
+                        with open(json_path, 'r', encoding='utf-8') as f:
+                            if latest_json.endswith('.log.json'):
+                                # 对于.log.json文件，逐行解析JSON对象
+                                lines = f.readlines()
+                                log_entries = []
+                                for line in lines:
+                                    line = line.strip()
+                                    if line:
+                                        try:
+                                            log_entries.append(json.loads(line))
+                                        except json.JSONDecodeError:
+                                            # 如果某行不是有效的JSON，跳过它
+                                            continue
+                                log_content = log_entries
+                            else:
+                                # 对于普通JSON文件，直接解析
+                                f.seek(0)  # 回到文件开头
+                                log_content = json.load(f)
+                        
+                        sse_print("defense_training_result", {
+                            "status": "success",
+                            "message": f"成功读取日志文件: {latest_json}",
+                            "file_path": json_path,
+                            "content": log_content,
+                            "progress": 100,
+                            "log": f"[100%] 防御训练日志已读取: {latest_json}",
+                            "file_type": "log_file"
+                        })
+                    except json.JSONDecodeError as e:
+                        sse_print("defense_training_result", {
+                            "status": "error",
+                            "message": f"日志文件JSON解析错误: {str(e)}",
+                            "file_path": json_path,
+                            "error_type": "JSONDecodeError",
+                            "progress": 100,
+                            "log": f"[100%] 解析日志文件失败: {str(e)}"
+                        })
+                    except Exception as e:
+                        sse_print("defense_training_result", {
+                            "status": "error", 
+                            "message": f"读取日志文件失败: {str(e)}",
+                            "file_path": json_path,
+                            "error_type": type(e).__name__,
+                            "progress": 100,
+                            "log": f"[100%] 读取日志文件时发生错误: {str(e)}"
+                        })
+                else:
+                    sse_print("defense_training_result", {
+                        "status": "warning",
+                        "message": f"目录中没有找到JSON文件",
+                        "file_path": vad_defense_dir,
+                        "progress": 100,
+                        "log": f"[100%] 目录 {vad_defense_dir} 中没有找到任何JSON文件"
+                    })
         else:
-            sse_print("自动驾驶防御训练结果", {
-                "message": f"目录 {vad_defense_dir} 不存在"
+            sse_print("defense_training_result", {
+                "status": "error",
+                "message": f"目录不存在: {vad_defense_dir}",
+                "file_path": vad_defense_dir,
+                "progress": 100,
+                "log": f"[100%] 输出目录不存在: {vad_defense_dir}"
             })
     
         sse_print("resource_release", {
