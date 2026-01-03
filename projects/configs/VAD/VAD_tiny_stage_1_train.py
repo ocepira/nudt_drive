@@ -309,7 +309,7 @@ model = dict(
             pc_range=point_cloud_range))))
 
 dataset_type = 'VADCustomNuScenesDataset'
-data_root = 'input/nuscenes/'
+data_root = r'input/data/nuscenes/'
 file_client_args = dict(backend='disk')
 
 train_pipeline = [
