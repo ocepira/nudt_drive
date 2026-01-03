@@ -11,7 +11,7 @@
 | process | 必填/选填，默认test | 指定进程名称，支持枚举值（第一个为默认值）: `test`, `attack`, `defense` |
 | image-path | 选填，默认第一个 | 输入图像路径，当process为`attack`或`defense`时默认第一个 |
 | attack-method | 选填 | 指定攻击方法，若process为`attack`则必填，支持枚举值（第一个为默认值）: `fgsm`, `pgd`, `bim`,`badnet`, `squareattack`, `nes` |
-| defense-method | 选填 | 指定防御方法，若process为`defense`则必填，支持枚举值（第一个为默认值）: `fgsm`, `pgd` |
+| defense-method | 选填 | 指定防御方法，若process为`defense`则必填，支持枚举值（第一个为默认值）: `fgsm_denoise`, `pgd_purifier` |
 | save-path | 选填 | 对抗样本保存路径 |
 | save-original-size | 选填 | 是否保存原始尺寸的对抗样本 |
 | config | 选填 | test config file path，当process为`test`时必填 |
