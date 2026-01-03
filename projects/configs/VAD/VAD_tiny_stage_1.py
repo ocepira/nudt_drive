@@ -42,7 +42,7 @@ _num_levels_ = 1
 bev_h_ = 100
 bev_w_ = 100
 queue_length = 3 # each sequence contains `queue_length` frames.
-total_epochs = 48
+total_epochs = 1
 
 model = dict(
     type='VAD',
@@ -309,7 +309,7 @@ model = dict(
             pc_range=point_cloud_range))))
 
 dataset_type = 'VADCustomNuScenesDataset'
-data_root = 'data/nuscenes/'
+data_root = r'input/data/nuscenes/'
 file_client_args = dict(backend='disk')
 
 train_pipeline = [
