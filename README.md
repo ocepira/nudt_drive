@@ -23,17 +23,12 @@
 | workers | 选填，默认为0 | 加载数据集时workers的数量 |
 
 ## 下载nuscene_tiny数据集如/data所示
-## 下载对应的 model/ckpts
+## 下载对应的 model
 
 ## 快速开始
-python main.py 
-
-python main.py --process test ./projects/configs/VAD/VAD_tiny_stage_1.py  ./ckpts/VAD_tiny.pth --launcher none --eval bbox  
+python main.py  --process xx
 
 
-python main.py --process attack  --image-path ./data/nuscenes/samples/CAM_BACK/n008-2018-08-01-15-16-36-0400__CAM_BACK__1533151603537558.jpg  --save-path ./OUTPUT/defense_fgsm_custom.png --attack-method pgd
-
-python main.py --process defense --image-path ./data/nuscenes/samples/CAM_BACK/n008-2018-08-01-15-16-36-0400__CAM_BACK__1533151603537558.jpg  --save-path ./OUTPUT/defense_fgsm_custom.png  --defense-method pgd
 
 ## 构建 Docker 镜像
 docker build -t vad:latest .
